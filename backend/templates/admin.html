@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Insight Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="background-glow"></div>
+    <div class="container">
+        <header>
+            <h1>AI Insight Engine</h1>
+            <p>Bridging cutting-edge AI research with business strategy</p>
+            
+            <div class="header-actions">
+                <button id="generateBtn" class="primary-btn">
+                    <span class="btn-text">Generate New Insight</span>
+                    <div class="loader hidden"></div>
+                </button>
+                <button id="settingsBtn" class="secondary-btn">⚙️ Settings</button>
+            </div>
+
+        </header>
+
+        <main>
+            <div id="errorBox" class="error-box hidden"></div>
+            
+            <section class="insights-section">
+                <div class="section-header">
+                    <h2>Latest Reports</h2>
+                    <span id="reportCount" class="badge">0</span>
+                </div>
+                <div id="reportsContainer" class="reports-grid">
+                    <!-- Reports will be dynamically injected here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    
+    <!-- Modal for viewing full report -->
+    <div id="reportModal" class="modal hidden">
+        <div class="modal-content glass-panel" style="max-width: 900px; width: 95%;">
+            <span class="close-btn">&times;</span>
+            <h2 id="modalTitle">Report</h2>
+            <div class="tabs">
+                <button class="tab-btn active" id="tabOverview">💡 Overview</button>
+                <button class="tab-btn" id="tabDetails">📄 Details</button>
+            </div>
+            <div id="modalBodyOverview" class="markdown-body tab-content overview-mode"></div>
+            <div id="modalBodyDetails" class="markdown-body tab-content hidden"></div>
+        </div>
+    </div>
+    
+    </div>
+
+    
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content glass-panel" style="max-width: 500px;">
+            <span class="close-btn" id="closeSettingsBtn">&times;</span>
+            <h2>System Settings</h2>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label>arXiv Search Query</label>
+                    <input type="text" id="arxivQueryInput" />
+                </div>
+                <div class="form-group">
+                    <label>Tech News RSS URL</label>
+                    <input type="text" id="rssUrlInput" />
+                </div>
+                <div class="form-group">
+                    <label>Auto-Generate Interval (Hours)</label>
+                    <input type="number" id="intervalInput" min="1" max="168" />
+                </div>
+                <button id="saveSettingsBtn" class="primary-btn" style="width: 100%; justify-content: center; margin-top: 1rem;">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

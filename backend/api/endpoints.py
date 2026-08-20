@@ -1,0 +1,140 @@
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field
+from typing import List
+from datetime import datetime, timezone
+import logging
+from sqlalchemy.orm import Session
+
+from backend.services.arxiv_fetcher import fetch_latest_ai_papers
+from backend.services.news_fetcher import fetch_recent_business_news
+from backend.core.gemini_client import gemini_client
+from backend.db.database import get_db
+from backend.db.models import InsightReport, SystemConfig
+
+
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import status
+import secrets
+
+security = HTTPBasic()
+
+def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, "admin")
+    correct_password = secrets.compare_digest(credentials.password, "secret")
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+class InsightResponse(BaseModel):
+    status: str = Field(..., description="Success or error status")
+    markdown_report: str = Field(..., description="Generated Markdown report")
+    report_id: int | None = Field(None, description="Database ID of the generated report")
+
+class InsightReportSchema(BaseModel):
+    id: int
+    title: str
+    markdown_content: str
+    markdown_content_detailed: str | None = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class SystemConfigSchema(BaseModel):
+    arxiv_query: str
+    rss_url: str
+    schedule_interval_hours: int
+
+def get_or_create_config(db: Session) -> SystemConfig:
+    config = db.query(SystemConfig).first()
+    if not config:
+        config = SystemConfig()
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    return config
+
+@router.get("/settings", response_model=SystemConfigSchema)
+def get_settings(db: Session = Depends(get_db), username: str = Depends(verify_admin)):
+    config = get_or_create_config(db)
+    return SystemConfigSchema(
+        arxiv_query=config.arxiv_query,
+        rss_url=config.rss_url,
+        schedule_interval_hours=config.schedule_interval_hours
+    )
+
+@router.post("/settings", response_model=SystemConfigSchema)
+def update_settings(settings: SystemConfigSchema, db: Session = Depends(get_db), username: str = Depends(verify_admin)):
+    config = get_or_create_config(db)
+    config.arxiv_query = settings.arxiv_query
+    config.rss_url = settings.rss_url
+    config.schedule_interval_hours = settings.schedule_interval_hours
+    db.commit()
+    db.refresh(config)
+    
+    # Restart scheduler to apply new interval
+    from backend.core.scheduler import start_scheduler
+    start_scheduler()
+    
+    return get_settings(db)
+
+@router.post("/generate-insight", response_model=InsightResponse)
+async def generate_insight(db: Session = Depends(get_db), username: str = Depends(verify_admin)):
+    logger.info("Insight generation API called.")
+    try:
+        config = get_or_create_config(db)
+        
+        papers = fetch_latest_ai_papers(max_results=3, search_query=config.arxiv_query)
+        news = fetch_recent_business_news(max_results=3, hours=24, rss_url=config.rss_url)
+        
+        report_text = gemini_client.generate_insight_report(papers=papers, news=news)
+        
+        if report_text.startswith("Error:"):
+            logger.error(f"Failed to generate report: {report_text}")
+            raise HTTPException(status_code=500, detail=report_text)
+            
+        parts = report_text.split("====DETAIL_SECTION====")
+        overview = parts[0].strip()
+        detailed = parts[1].strip() if len(parts) > 1 else ""
+        
+        # Extract title from overview
+        title = "AI Business Insights"
+        for line in overview.split('\n'):
+            if line.startswith('# '):
+                title = line.replace('# ', '').strip()
+                break
+                
+        db_report = InsightReport(
+            title=title,
+            markdown_content=overview,
+            markdown_content_detailed=detailed
+        )
+        db.add(db_report)
+        db.commit()
+        db.refresh(db_report)
+            
+        logger.info("Insight report generated and saved successfully.")
+        return InsightResponse(
+            status="success",
+            markdown_report=overview,
+            report_id=db_report.id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/insights", response_model=List[InsightReportSchema])
+def get_insights(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    reports = db.query(InsightReport).order_by(InsightReport.created_at.desc()).offset(skip).limit(limit).all()
+    return reports

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+google-generativeai
+requests
+feedparser
+python-dotenv
+pydantic
+
+sqlalchemy
