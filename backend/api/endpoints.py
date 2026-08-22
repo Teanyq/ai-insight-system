@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.services.arxiv_fetcher import fetch_latest_ai_papers
 from backend.services.news_fetcher import fetch_recent_business_news
 from backend.core.gemini_client import gemini_client
+from backend.services.twitter_client import twitter_client
 from backend.db.database import get_db
 from backend.db.models import InsightReport, SystemConfig
 
@@ -102,6 +103,7 @@ def run_insight_generation_task(db: Session):
     parts = report_text.split("====DETAIL_SECTION====")
     overview = parts[0].strip()
     detailed = parts[1].strip() if len(parts) > 1 else ""
+    tweet_text_raw = parts[2].strip() if len(parts) > 2 else ""
     
     title = "AI Business Insights"
     for line in overview.split('\n'):
@@ -117,6 +119,23 @@ def run_insight_generation_task(db: Session):
     db.add(db_report)
     db.commit()
     db.refresh(db_report)
+    
+    # Post to X (Twitter)
+    if tweet_text_raw:
+        # Clean up tweet text by removing any markdown headers like "### PART 3..." if generated
+        lines = tweet_text_raw.split('\n')
+        clean_lines = [line for line in lines if not line.strip().startswith('###')]
+        clean_tweet = '\n'.join(clean_lines).strip()
+        
+        app_url = os.getenv("APP_URL", "")
+        if app_url:
+            clean_tweet += f"\n\n詳細はこちら: {app_url}"
+            
+        # Ensure it fits Twitter limits roughly
+        if len(clean_tweet) > 270:
+            clean_tweet = clean_tweet[:267] + "..."
+            
+        twitter_client.post_tweet(clean_tweet)
         
     logger.info("Insight report generated and saved successfully.")
     return overview, db_report.id
