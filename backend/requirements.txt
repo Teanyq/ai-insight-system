@@ -5,5 +5,6 @@ requests
 feedparser
 python-dotenv
 pydantic
+tweepy
 
 sqlalchemy
