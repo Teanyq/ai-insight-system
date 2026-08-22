@@ -86,52 +86,69 @@ def update_settings(settings: SystemConfigSchema, db: Session = Depends(get_db),
     
     return get_settings(db)
 
+import os
+
+def run_insight_generation_task(db: Session):
+    config = get_or_create_config(db)
+    papers = fetch_latest_ai_papers(max_results=3, search_query=config.arxiv_query)
+    news = fetch_recent_business_news(max_results=3, hours=24, rss_url=config.rss_url)
+    
+    report_text = gemini_client.generate_insight_report(papers=papers, news=news)
+    
+    if report_text.startswith("Error:"):
+        logger.error(f"Failed to generate report: {report_text}")
+        raise HTTPException(status_code=500, detail=report_text)
+        
+    parts = report_text.split("====DETAIL_SECTION====")
+    overview = parts[0].strip()
+    detailed = parts[1].strip() if len(parts) > 1 else ""
+    
+    title = "AI Business Insights"
+    for line in overview.split('\n'):
+        if line.startswith('# '):
+            title = line.replace('# ', '').strip()
+            break
+            
+    db_report = InsightReport(
+        title=title,
+        markdown_content=overview,
+        markdown_content_detailed=detailed
+    )
+    db.add(db_report)
+    db.commit()
+    db.refresh(db_report)
+        
+    logger.info("Insight report generated and saved successfully.")
+    return overview, db_report.id
+
 @router.post("/generate-insight", response_model=InsightResponse)
 async def generate_insight(db: Session = Depends(get_db), username: str = Depends(verify_admin)):
-    logger.info("Insight generation API called.")
+    logger.info("Insight generation API called via Admin UI.")
     try:
-        config = get_or_create_config(db)
-        
-        papers = fetch_latest_ai_papers(max_results=3, search_query=config.arxiv_query)
-        news = fetch_recent_business_news(max_results=3, hours=24, rss_url=config.rss_url)
-        
-        report_text = gemini_client.generate_insight_report(papers=papers, news=news)
-        
-        if report_text.startswith("Error:"):
-            logger.error(f"Failed to generate report: {report_text}")
-            raise HTTPException(status_code=500, detail=report_text)
-            
-        parts = report_text.split("====DETAIL_SECTION====")
-        overview = parts[0].strip()
-        detailed = parts[1].strip() if len(parts) > 1 else ""
-        
-        # Extract title from overview
-        title = "AI Business Insights"
-        for line in overview.split('\n'):
-            if line.startswith('# '):
-                title = line.replace('# ', '').strip()
-                break
-                
-        db_report = InsightReport(
-            title=title,
-            markdown_content=overview,
-            markdown_content_detailed=detailed
-        )
-        db.add(db_report)
-        db.commit()
-        db.refresh(db_report)
-            
-        logger.info("Insight report generated and saved successfully.")
+        overview, report_id = run_insight_generation_task(db)
         return InsightResponse(
             status="success",
             markdown_report=overview,
-            report_id=db_report.id
+            report_id=report_id
         )
-        
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Unexpected error in endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/run-daily-job")
+async def run_daily_job(token: str, db: Session = Depends(get_db)):
+    expected_token = os.getenv("CRON_SECRET", "my-secret-token")
+    if token != expected_token:
+        raise HTTPException(status_code=401, detail="Invalid token")
+        
+    logger.info("Insight generation API called via Cron Job.")
+    try:
+        overview, report_id = run_insight_generation_task(db)
+        return {"status": "success", "message": "Daily job executed successfully."}
+    except Exception as e:
+        logger.error(f"Daily job failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/insights", response_model=List[InsightReportSchema])
