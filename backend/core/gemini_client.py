@@ -67,10 +67,10 @@ CRITICAL RULES:
 3. EXTREMELY SIMPLE LANGUAGE: Write in Japanese for an audience of college students. Keep it enthusiastic and accessible. Do not sound like an academic paper. Use relatable analogies (SNS, part-time jobs, university life, pop culture).
 4. 1 PAPER = 1 THEME: Focus entirely on the PRIMARY THEME PAPER. Use the CONTEXT only to show how this connects to real-world trends they might know.
 
-You MUST split your response into TWO parts, separated exactly by the following delimiter on its own line:
+You MUST split your response into THREE parts, separated exactly by the following delimiter on its own line:
 ====DETAIL_SECTION====
 
-### PART 1: Visual Overview (Above the delimiter)
+### PART 1: Visual Overview (Above the first delimiter)
 This section should be highly visual, punchy, and instantly understandable.
 
 Structure for Part 1:
@@ -87,7 +87,7 @@ CRITICAL MERMAID RULES:
 
 ====DETAIL_SECTION====
 
-### PART 2: Deep Dive Details (Below the delimiter)
+### PART 2: Deep Dive Details (Between the delimiters)
 This section is for those who want to know a bit more, but STILL keep the language simple and math-free.
 
 Structure for Part 2:
@@ -97,6 +97,17 @@ Structure for Part 2:
 [How this relates to the other papers and news provided. Connect it to familiar tech like ChatGPT, TikTok, or iPhone if possible.]
 ## 💡 若者向けの未来アクション (Action Plan)
 [What should a college student or young professional do with this knowledge? Actionable advice for their future.]
+
+====DETAIL_SECTION====
+
+### PART 3: X (Twitter) Post (Below the second delimiter)
+Write a highly engaging, news-style tweet to share this insight on X. 
+Rules for the tweet:
+- Content: Explain what amazing, practical things we will be able to do with this technology ("こういうことが皆さんにもできるようになりますよ" or "身近な面白い活用例").
+- Tone: Not overly casual, slightly formal like a news column or tech newsletter, but still capable of sparking intellectual curiosity.
+- Length: Around 100-140 characters.
+- DO NOT INCLUDE URLs or links (the backend will append the app URL automatically).
+- Do not use hashtags unless highly relevant (max 1).
 """
 
         logger.info("Calling Gemini API with youth-targeted prompt...")
