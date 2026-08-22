@@ -518,3 +518,76 @@ header p {
 .report-card:hover .read-more-btn {
     color: #fff;
 }
+
+/* =========================================
+   Mobile Responsiveness
+   ========================================= */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    header {
+        margin-bottom: 2rem;
+        padding-top: 1rem;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    header p {
+        font-size: 0.9rem;
+    }
+    
+    .reports-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .report-card {
+        padding: 1rem;
+    }
+    
+    .modal {
+        padding: 1rem;
+    }
+    
+    .glass-panel {
+        padding: 1.5rem;
+    }
+    
+    #modalTitle {
+        font-size: 1.25rem;
+        padding-right: 1.5rem;
+    }
+    
+    .close-btn {
+        top: 1rem;
+        right: 1rem;
+        font-size: 1.5rem;
+    }
+    
+    .markdown-body h1 {
+        font-size: 1.75rem;
+    }
+    
+    .markdown-body h2 {
+        font-size: 1.25rem;
+    }
+    
+    .overview-mode {
+        font-size: 1.05rem;
+    }
+    
+    .tabs {
+        gap: 0.5rem;
+        flex-direction: column;
+    }
+    
+    .tab-btn {
+        width: 100%;
+        font-size: 1rem;
+        padding: 0.5rem;
+    }
+}
