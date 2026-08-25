@@ -8,6 +8,13 @@ import os
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
 app = FastAPI(
     title="AI Research x Business Insight API",
     description="Backend MVP for AI Business Insights",
