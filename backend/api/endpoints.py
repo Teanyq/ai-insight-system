@@ -127,8 +127,12 @@ def run_insight_generation_task(db: Session):
         clean_lines = [line for line in lines if not line.strip().startswith('###')]
         clean_tweet = '\n'.join(clean_lines).strip()
         
-        app_url = os.getenv("APP_URL", "")
-        url_text = f"\n\n詳細はこちら: {app_url}" if app_url else ""
+        app_url_raw = os.getenv("APP_URL", "").strip()
+        # https:// 等を取り除く
+        app_url = app_url_raw.replace("https://", "").replace("http://", "").replace("[", "").replace("]", "").rstrip("/")
+        
+        # 記事に直接飛べるようにクエリパラメータ ?id=... を付与
+        url_text = f"\n\n詳細はこちら: {app_url}/?id={db_report.id}" if app_url else ""
             
         # Twitter limits Japanese (CJK) to 140 characters. 
         # Leave some room for the URL text.
