@@ -134,12 +134,17 @@ def run_insight_generation_task(db: Session):
         # 記事に直接飛べるようにクエリパラメータ ?id=... を付与
         url_text = f"\n\n詳細はこちら: {app_url}/?id={db_report.id}" if app_url else ""
             
-        # Twitter limits Japanese (CJK) to 140 characters. 
-        # Leave some room for the URL text.
-        max_length = 135 - len(url_text)
-        if len(clean_tweet) > max_length:
-            clean_tweet = clean_tweet[:max_length-3] + "..."
-            
+        # Twitterの文字数計算: URLは23文字、全角は2文字分で合計280文字が上限。
+        # ツイート本文(全角)は安全を期して115文字程度まで許容できる。
+        if len(clean_tweet) > 115:
+            clean_tweet = clean_tweet[:115]
+            # 途切れて読みにくくなるのを防ぐため、最後の句点(。)や感嘆符(！)で丸める
+            last_punct = max(clean_tweet.rfind('。'), clean_tweet.rfind('！'), clean_tweet.rfind('!'))
+            if last_punct > 0:
+                clean_tweet = clean_tweet[:last_punct+1]
+            else:
+                clean_tweet = clean_tweet[:112] + "..."
+                
         clean_tweet += url_text
             
         twitter_client.post_tweet(clean_tweet)
