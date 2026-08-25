@@ -15,28 +15,8 @@ def scheduled_insight_generation():
     logger.info("Starting scheduled insight generation job...")
     db = SessionLocal()
     try:
-        config = db.query(SystemConfig).first()
-        if not config:
-            config = SystemConfig()
-            db.add(config)
-            db.commit()
-            db.refresh(config)
-            
-        papers = fetch_latest_ai_papers(max_results=3, search_query=config.arxiv_query)
-        news = fetch_recent_business_news(max_results=3, hours=24, rss_url=config.rss_url)
-        
-        report = gemini_client.generate_insight_report(papers=papers, news=news)
-        
-        if report.startswith("Error:") or report.startswith("Error:"):
-            logger.error(f"Scheduled generation failed: {report}")
-            return
-            
-        db_report = InsightReport(
-            title=f"AI Business Insights (Auto) - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}",
-            markdown_content=report
-        )
-        db.add(db_report)
-        db.commit()
+        from backend.api.endpoints import run_insight_generation_task
+        run_insight_generation_task(db)
         logger.info("Scheduled insight generated and saved successfully.")
     except Exception as e:
         logger.error(f"Error in scheduled job: {e}")
