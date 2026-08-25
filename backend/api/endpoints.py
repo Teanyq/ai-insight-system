@@ -1,188 +1,123 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, Field
-from typing import List
-from datetime import datetime, timezone
+import google.generativeai as genai
 import logging
-from sqlalchemy.orm import Session
-
-from backend.services.arxiv_fetcher import fetch_latest_ai_papers
-from backend.services.news_fetcher import fetch_recent_business_news
-from backend.core.gemini_client import gemini_client
-from backend.services.twitter_client import twitter_client
-from backend.db.database import get_db
-from backend.db.models import InsightReport, SystemConfig
-
-
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi import status
-import secrets
-
-security = HTTPBasic()
-
-def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, "admin")
-    correct_password = secrets.compare_digest(credentials.password, "secret")
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
+from typing import List, Dict
+from backend.core.config import settings
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
 
-router = APIRouter()
+class GeminiClient:
+    def __init__(self):
+        self.is_configured = False
+        api_key = settings.GEMINI_API_KEY
 
-class InsightResponse(BaseModel):
-    status: str = Field(..., description="Success or error status")
-    markdown_report: str = Field(..., description="Generated Markdown report")
-    report_id: int | None = Field(None, description="Database ID of the generated report")
+        if not api_key or api_key == "your_gemini_api_key_here":
+            logger.warning("GEMINI_API_KEY is not set.")
+        else:
+            genai.configure(api_key=api_key)
+            self.is_configured = True
 
-class InsightReportSchema(BaseModel):
-    id: int
-    title: str
-    markdown_content: str
-    markdown_content_detailed: str | None = None
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
+        self.model_name = 'gemini-3.5-flash'
+        try:
+            self.model = genai.GenerativeModel(
+                model_name=self.model_name,
+                system_instruction="You are a charismatic, extremely easy-to-understand tech influencer who breaks down complex AI research for college students and young professionals. Your tone is energetic, accessible, and completely free of academic jargon."
+            )
+        except Exception as e:
+            logger.error(f"Gemini init error: {e}")
+            self.model = None
 
-class SystemConfigSchema(BaseModel):
-    arxiv_query: str
-    rss_url: str
-    schedule_interval_hours: int
+    def generate_insight_report(self, papers: List[Dict[str, str]], news: List[Dict[str, str]]) -> str:
+        if not self.is_configured or not self.model:
+            return "Error: Gemini API is not configured."
+        if not papers:
+            return "Error: No papers available to focus on."
 
-def get_or_create_config(db: Session) -> SystemConfig:
-    config = db.query(SystemConfig).first()
-    if not config:
-        config = SystemConfig()
-        db.add(config)
-        db.commit()
-        db.refresh(config)
-    return config
+        main_paper = papers[0]
+        context_papers = papers[1:]
 
-@router.get("/settings", response_model=SystemConfigSchema)
-def get_settings(db: Session = Depends(get_db), username: str = Depends(verify_admin)):
-    config = get_or_create_config(db)
-    return SystemConfigSchema(
-        arxiv_query=config.arxiv_query,
-        rss_url=config.rss_url,
-        schedule_interval_hours=config.schedule_interval_hours
-    )
-
-@router.post("/settings", response_model=SystemConfigSchema)
-def update_settings(settings: SystemConfigSchema, db: Session = Depends(get_db), username: str = Depends(verify_admin)):
-    config = get_or_create_config(db)
-    config.arxiv_query = settings.arxiv_query
-    config.rss_url = settings.rss_url
-    config.schedule_interval_hours = settings.schedule_interval_hours
-    db.commit()
-    db.refresh(config)
-    
-    # Restart scheduler to apply new interval
-    from backend.core.scheduler import start_scheduler
-    start_scheduler()
-    
-    return get_settings(db)
-
-import os
-
-def run_insight_generation_task(db: Session):
-    config = get_or_create_config(db)
-    papers = fetch_latest_ai_papers(max_results=3, search_query=config.arxiv_query)
-    news = fetch_recent_business_news(max_results=3, hours=24, rss_url=config.rss_url)
-    
-    report_text = gemini_client.generate_insight_report(papers=papers, news=news)
-    
-    if report_text.startswith("Error:"):
-        logger.error(f"Failed to generate report: {report_text}")
-        raise HTTPException(status_code=500, detail=report_text)
-        
-    parts = report_text.split("====DETAIL_SECTION====")
-    overview = parts[0].strip()
-    detailed = parts[1].strip() if len(parts) > 1 else ""
-    tweet_text_raw = parts[2].strip() if len(parts) > 2 else ""
-    
-    title = "AI Business Insights"
-    for line in overview.split('\n'):
-        if line.startswith('# '):
-            title = line.replace('# ', '').strip()
-            break
-            
-    db_report = InsightReport(
-        title=title,
-        markdown_content=overview,
-        markdown_content_detailed=detailed
-    )
-    db.add(db_report)
-    db.commit()
-    db.refresh(db_report)
-    
-    # Post to X (Twitter)
-    if tweet_text_raw:
-        # Clean up tweet text by removing any markdown headers like "### PART 3..." if generated
-        lines = tweet_text_raw.split('\n')
-        clean_lines = [line for line in lines if not line.strip().startswith('###')]
-        clean_tweet = '\n'.join(clean_lines).strip()
-        
-        app_url_raw = os.getenv("APP_URL", "").strip()
-        # https:// 等を取り除く
-        app_url = app_url_raw.replace("https://", "").replace("http://", "").replace("[", "").replace("]", "").rstrip("/")
-        
-        # 記事に直接飛べるようにクエリパラメータ ?id=... を付与
-        url_text = f"\n\n詳細はこちら: {app_url}/?id={db_report.id}" if app_url else ""
-            
-        # Twitterの文字数計算: URLは23文字、全角は2文字分で合計280文字が上限。
-        # ツイート本文(全角)は安全を期して115文字程度まで許容できる。
-        if len(clean_tweet) > 115:
-            clean_tweet = clean_tweet[:115]
-            # 途切れて読みにくくなるのを防ぐため、最後の句点(。)や感嘆符(！)で丸める
-            last_punct = max(clean_tweet.rfind('。'), clean_tweet.rfind('！'), clean_tweet.rfind('!'))
-            if last_punct > 0:
-                clean_tweet = clean_tweet[:last_punct+1]
-            else:
-                clean_tweet = clean_tweet[:112] + "..."
-                
-        clean_tweet += url_text
-            
-        twitter_client.post_tweet(clean_tweet)
-        
-    logger.info("Insight report generated and saved successfully.")
-    return overview, db_report.id
-
-@router.post("/generate-insight", response_model=InsightResponse)
-async def generate_insight(db: Session = Depends(get_db), username: str = Depends(verify_admin)):
-    logger.info("Insight generation API called via Admin UI.")
-    try:
-        overview, report_id = run_insight_generation_task(db)
-        return InsightResponse(
-            status="success",
-            markdown_report=overview,
-            report_id=report_id
+        prompt = (
+            f"Your task is to analyze the following PRIMARY research paper, and synthesize an incredibly engaging, ultra-accessible explanation in Japanese targeted at college students and young people.\n\n"
+            f"### [PRIMARY THEME PAPER]\n"
+            f"- **{main_paper.get('title', 'No Title')}**\n  {main_paper.get('summary', 'No Summary')}\n\n"
         )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in endpoint: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/run-daily-job")
-async def run_daily_job(token: str, db: Session = Depends(get_db)):
-    expected_token = os.getenv("CRON_SECRET", "my-secret-token")
-    if token != expected_token:
-        raise HTTPException(status_code=401, detail="Invalid token")
         
-    logger.info("Insight generation API called via Cron Job.")
-    try:
-        overview, report_id = run_insight_generation_task(db)
-        return {"status": "success", "message": "Daily job executed successfully."}
-    except Exception as e:
-        logger.error(f"Daily job failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        prompt += "### [CONTEXT: Other Recent Papers]\n"
+        if context_papers:
+            for i, p in enumerate(context_papers, 1):
+                prompt += f"- **{p.get('title', 'No Title')}**\n  {p.get('summary', 'No Summary')}\n\n"
+        else:
+            prompt += "No additional papers.\n\n"
+        
+        prompt += "### [CONTEXT: Recent Business News]\n"
+        if news:
+            for i, n in enumerate(news, 1):
+                prompt += f"- **{n.get('title', 'No Title')}**\n  {n.get('summary', 'No Summary')}\n\n"
+        else:
+            prompt += "No recent news available.\n\n"
+            
+        prompt += """
+CRITICAL RULES:
+1. NO MATH OR LATEX: NEVER use LaTeX math formulas (e.g., $$\text{Regret} = ...$$ or $E=mc^2$). If the paper contains math, explain the *concept* using a simple, relatable everyday analogy (e.g., comparing it to picking a restaurant, playing a video game, or scrolling SNS). 
+2. BULLET POINTS OVER PARAGRAPHS: Minimize the use of long paragraphs. Explain almost everything using highly readable bullet points. Use standard text sentences ONLY for absolute minimum necessary context (e.g., a 1-sentence intro).
+3. EXTREMELY SIMPLE LANGUAGE: Write in Japanese for an audience of college students. Keep it enthusiastic and accessible. Do not sound like an academic paper. Use relatable analogies (SNS, part-time jobs, university life, pop culture).
+4. 1 PAPER = 1 THEME: Focus entirely on the PRIMARY THEME PAPER. Use the CONTEXT only to show how this connects to real-world trends they might know.
 
-@router.get("/insights", response_model=List[InsightReportSchema])
-def get_insights(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    reports = db.query(InsightReport).order_by(InsightReport.created_at.desc()).offset(skip).limit(limit).all()
-    return reports
+You MUST split your response into THREE parts, separated exactly by the following delimiter on its own line:
+====DETAIL_SECTION====
+
+### PART 1: Visual Overview (Above the first delimiter)
+This section should be highly visual, punchy, and instantly understandable.
+
+Structure for Part 1:
+# [Catchy, clickbait-style but accurate Title]
+## 🎯 要するに何がスゴイの？ (Core Concept)
+[Extremely concise summary of the primary paper using an everyday analogy]
+## 📊 図解でサクッと理解！ (Visual Breakdown)
+[Use Markdown ````mermaid ... ```` blocks to generate a simple flowchart or mindmap. Keep the text inside the diagram VERY simple Japanese. 
+CRITICAL MERMAID RULES: 
+- You MUST enclose all node text in double quotes to prevent syntax errors (e.g., A["ヤバいAI技術"] --> B("生活が激変")).
+- Do not use markdown tables here.]
+## 🚀 私たちの生活はどう変わる？ (Life Impact)
+[Short summary of how this will impact young people's lives or future careers]
+
+====DETAIL_SECTION====
+
+### PART 2: Deep Dive Details (Between the delimiters)
+This section is for those who want to know a bit more, but STILL keep the language simple and math-free.
+
+Structure for Part 2:
+## 🔬 どんな仕組みなの？ (Technical Deep Dive)
+[Explain the paper's methodology and breakthrough without any math. Use metaphors.]
+## 🌐 世の中のトレンドとの繋がり (Context & Market Landscape)
+[How this relates to the other papers and news provided. Connect it to familiar tech like ChatGPT, TikTok, or iPhone if possible.]
+## 💡 若者向けの未来アクション (Action Plan)
+[What should a college student or young professional do with this knowledge? Actionable advice for their future.]
+
+====DETAIL_SECTION====
+
+### PART 3: X (Twitter) Post (Below the second delimiter)
+Write a highly engaging, news-style tweet to share this insight on X. 
+Rules for the tweet:
+- Content: Start with ONE extremely catchy, hook sentence that grabs attention immediately. Following that, provide a super concise 2-3 sentence abstract that makes anyone curious about the core breakthrough.
+- Tone: Not overly casual, slightly formal like a news column or tech newsletter, but still capable of sparking intellectual curiosity. Do not just blindly summarize; make the opening sentence impactful.
+- Formatting: MUST finish the final sentence cleanly with punctuation like '。' or '！'. DO NOT leave sentences hanging.
+- Length: STRICTLY under 110 characters (Japanese).
+- DO NOT INCLUDE URLs or links (the backend will append the app URL automatically).
+- Do not use hashtags unless highly relevant (max 1).
+"""
+
+        logger.info("Calling Gemini API with youth-targeted prompt...")
+        try:
+            response = self.model.generate_content(prompt)
+            logger.info("Gemini API call success")
+            return response.text
+        except Exception as e:
+            logger.error(f"Gemini API error: {e}")
+            return f"Report generation error: {e}"
+
+gemini_client = GeminiClient()
