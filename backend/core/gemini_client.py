@@ -103,9 +103,10 @@ Structure for Part 2:
 ### PART 3: X (Twitter) Post (Below the second delimiter)
 Write a highly engaging, news-style tweet to share this insight on X. 
 Rules for the tweet:
-- Content: Start with ONE extremely catchy, hook sentence that grabs attention immediately. Following that, provide a super concise 2-3 sentence abstract that makes anyone curious about the core breakthrough.
-- Tone: Not overly casual, slightly formal like a news column or tech newsletter, but still capable of sparking intellectual curiosity. Do not just blindly summarize; make the opening sentence impactful.
-- Length: Max 110 characters (Japanese).
+- Content: Start with an attention-grabbing emoji (e.g., 🚨, 🚀, 💡, 🔥) and ONE extremely catchy, punchy hook sentence. Following that, provide a super concise abstract (1-2 sentences) that makes anyone curious about the core breakthrough.
+- Tone: DO NOT use polite language (敬語・ですます調は一切禁止). Use sharp, assertive "だ・である" or engaging colloquial phrasing. Make it sound like a provocative tech alert that demands immediate attention.
+- Formatting: MUST finish the final sentence cleanly with punctuation like '。' or '！'. DO NOT leave sentences hanging.
+- Length: STRICTLY under 110 characters (Japanese).
 - DO NOT INCLUDE URLs or links (the backend will append the app URL automatically).
 - Do not use hashtags unless highly relevant (max 1).
 """
