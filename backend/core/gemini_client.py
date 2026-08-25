@@ -103,9 +103,9 @@ Structure for Part 2:
 ### PART 3: X (Twitter) Post (Below the second delimiter)
 Write a highly engaging, news-style tweet to share this insight on X. 
 Rules for the tweet:
-- Content: Explain what amazing, practical things we will be able to do with this technology ("こういうことが皆さんにもできるようになりますよ" or "身近な面白い活用例").
-- Tone: Not overly casual, slightly formal like a news column or tech newsletter, but still capable of sparking intellectual curiosity.
-- Length: Around 100-140 characters.
+- Content: Start with ONE extremely catchy, hook sentence that grabs attention immediately. Following that, provide a super concise 2-3 sentence abstract that makes anyone curious about the core breakthrough.
+- Tone: Not overly casual, slightly formal like a news column or tech newsletter, but still capable of sparking intellectual curiosity. Do not just blindly summarize; make the opening sentence impactful.
+- Length: Max 110 characters (Japanese).
 - DO NOT INCLUDE URLs or links (the backend will append the app URL automatically).
 - Do not use hashtags unless highly relevant (max 1).
 """
