@@ -26,6 +26,17 @@
                 
                 const reports = await res.json();
                 renderReports(reports);
+
+                // URLのクエリパラメータ ?id=... をチェックして特定の記事を開く
+                const urlParams = new URLSearchParams(window.location.search);
+                const reportId = urlParams.get('id');
+                if (reportId) {
+                    const targetReport = reports.find(r => r.id == reportId);
+                    if (targetReport) {
+                        // 少し遅らせてから開く（UIの描画完了を待つ）
+                        setTimeout(() => openReport(targetReport), 100);
+                    }
+                }
             } catch (err) {
                 console.error(err);
                 showError('Error loading reports: ' + err.message);
