@@ -1,6 +1,4 @@
-from google import genai
-# pyrefly: ignore [missing-import]
-from google.genai import types
+import google.generativeai as genai
 import logging
 from typing import List, Dict
 from backend.core.config import settings
@@ -19,16 +17,22 @@ class GeminiClient:
 
         if not api_key or api_key == "your_gemini_api_key_here":
             logger.warning("GEMINI_API_KEY is not set.")
-            self.client = None
         else:
-            self.client = genai.Client(api_key=api_key)
+            genai.configure(api_key=api_key)
             self.is_configured = True
 
         self.model_name = 'gemini-3.5-flash'
-        self.system_instruction = "You are a charismatic, extremely easy-to-understand tech influencer who breaks down complex AI research for college students and young professionals. Your tone is energetic, accessible, and completely free of academic jargon."
+        try:
+            self.model = genai.GenerativeModel(
+                model_name=self.model_name,
+                system_instruction="You are a charismatic, extremely easy-to-understand tech influencer who breaks down complex AI research for college students and young professionals. Your tone is energetic, accessible, and completely free of academic jargon."
+            )
+        except Exception as e:
+            logger.error(f"Gemini init error: {e}")
+            self.model = None
 
     def generate_insight_report(self, papers: List[Dict[str, str]], news: List[Dict[str, str]]) -> str:
-        if not self.is_configured or not self.client:
+        if not self.is_configured or not self.model:
             return "Error: Gemini API is not configured."
         if not papers:
             return "Error: No papers available to focus on."
@@ -109,14 +113,7 @@ Rules for the tweet:
 
         logger.info("Calling Gemini API with youth-targeted prompt...")
         try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction,
-                    temperature=0.7,
-                )
-            )
+            response = self.model.generate_content(prompt)
             logger.info("Gemini API call success")
             return response.text
         except Exception as e:
