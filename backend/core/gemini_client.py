@@ -66,6 +66,7 @@ CRITICAL RULES:
 2. BULLET POINTS OVER PARAGRAPHS: Minimize the use of long paragraphs. Explain almost everything using highly readable bullet points. Use standard text sentences ONLY for absolute minimum necessary context (e.g., a 1-sentence intro).
 3. EXTREMELY SIMPLE LANGUAGE: Write in Japanese for an audience of college students. Keep it enthusiastic and accessible. Do not sound like an academic paper. Use relatable analogies (SNS, part-time jobs, university life, pop culture).
 4. 1 PAPER = 1 THEME: Focus entirely on the PRIMARY THEME PAPER. Use the CONTEXT only to show how this connects to real-world trends they might know.
+5. STRICT FORMATTING: DO NOT include any conversational filler (e.g. "Sure, here is the report"). The VERY FIRST characters of your response MUST be '# [Title]'.
 
 You MUST split your response into THREE parts, separated exactly by the following delimiter on its own line:
 ====DETAIL_SECTION====
@@ -119,5 +120,21 @@ Rules for the tweet:
         except Exception as e:
             logger.error(f"Gemini API error: {e}")
             return f"Report generation error: {e}"
+
+    def fix_report_title(self, content: str) -> str:
+        if not self.is_configured or not self.model:
+            return "AI Business Insights"
+        prompt = (
+            "Extract a catchy, clickbait-style but accurate title from the following Markdown report. "
+            "Output ONLY the title string itself. Do NOT output markdown symbols like # or **, and do not output any conversational filler.\n\n"
+            f"REPORT:\n{content}"
+        )
+        try:
+            response = self.model.generate_content(prompt)
+            title = response.text.strip().replace('#', '').replace('**', '').strip()
+            return title if title else "AI Business Insights"
+        except Exception as e:
+            logger.error(f"Gemini fix_title error: {e}")
+            return "AI Business Insights"
 
 gemini_client = GeminiClient()
