@@ -23,6 +23,23 @@ def scheduled_insight_generation():
     finally:
         db.close()
 
+def run_healing_agent():
+    logger.info("Starting healing agent to fix malformed reports...")
+    db = SessionLocal()
+    try:
+        reports = db.query(InsightReport).filter(InsightReport.title == 'AI Business Insights').all()
+        for report in reports:
+            logger.info(f"Healing report ID {report.id}...")
+            new_title = gemini_client.fix_report_title(report.markdown_content)
+            if new_title and new_title != "AI Business Insights":
+                report.title = new_title
+                logger.info(f"Report ID {report.id} healed. New title: {new_title}")
+        db.commit()
+    except Exception as e:
+        logger.error(f"Error in healing agent: {e}")
+    finally:
+        db.close()
+
 def start_scheduler():
     global _scheduler
     db = SessionLocal()
@@ -48,4 +65,13 @@ def start_scheduler():
         id='auto_insight_job',
         replace_existing=True
     )
-    logger.info(f"Scheduled job configured to run every {interval} hours.")
+    
+    _scheduler.add_job(
+        run_healing_agent,
+        'interval',
+        hours=12,
+        id='healing_agent_job',
+        replace_existing=True
+    )
+    
+    logger.info(f"Scheduled job configured to run every {interval} hours. Healing agent runs every 12 hours.")
