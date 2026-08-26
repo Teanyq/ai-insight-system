@@ -19,6 +19,47 @@
             if (e.target === modal) modal.classList.add('hidden');
         });
 
+        const privacyLink = document.getElementById('privacyLink');
+        const contactLink = document.getElementById('contactLink');
+        const infoModal = document.getElementById('infoModal');
+        const infoModalTitle = document.getElementById('infoModalTitle');
+        const infoModalBody = document.getElementById('infoModalBody');
+        const infoCloseBtn = document.querySelector('.info-close-btn');
+
+        if (infoCloseBtn) infoCloseBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+
+        window.addEventListener('click', (e) => {
+            if (e.target === infoModal) infoModal.classList.add('hidden');
+        });
+
+        if (privacyLink) {
+            privacyLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                infoModalTitle.textContent = "Privacy Policy";
+                infoModalBody.innerHTML = `
+                    <h3>広告の配信について</h3>
+                    <p>当サイトは Google AdSense を利用して広告を配信しています。</p>
+                    <p>Googleなどの第三者配信事業者は、Cookieを使用して、ユーザーが当サイトや他のウェブサイトに過去にアクセスした際の情報に基づいて広告を配信します。</p>
+                    <p>ユーザーは、<a href="https://myadcenter.google.com/" target="_blank" style="color: #3b82f6;">広告設定</a>でパーソナライズ広告を無効にすることができます。</p>
+                `;
+                infoModal.classList.remove('hidden');
+            });
+        }
+
+        if (contactLink) {
+            contactLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                infoModalTitle.textContent = "Contact / About";
+                infoModalBody.innerHTML = `
+                    <h3>運営者情報</h3>
+                    <p>AI Insight Engineは、最新のAI論文とビジネスニュースを掛け合わせてインサイトを自動生成するプロジェクトです。</p>
+                    <p>お問い合わせやフィードバックは、以下のX（Twitter）アカウント（またはDM）までお気軽にどうぞ。</p>
+                    <p><a href="https://twitter.com/" target="_blank" style="color: #3b82f6; font-weight: bold;">X (Twitter) で問い合わせる</a></p>
+                `;
+                infoModal.classList.remove('hidden');
+            });
+        }
+
         async function fetchReports() {
             try {
                 const res = await fetch('/api/v1/insights');
