@@ -10,7 +10,7 @@ from backend.services.news_fetcher import fetch_recent_business_news
 from backend.core.gemini_client import gemini_client
 from backend.services.twitter_client import twitter_client
 from backend.db.database import get_db
-from backend.db.models import InsightReport, SystemConfig
+from backend.db.models import InsightReport, SystemConfig, UsedPaper
 
 
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -91,7 +91,15 @@ import os
 
 def run_insight_generation_task(db: Session):
     config = get_or_create_config(db)
-    papers = fetch_latest_ai_papers(max_results=3, search_query=config.arxiv_query)
+    
+    raw_papers = fetch_latest_ai_papers(max_results=15, search_query=config.arxiv_query)
+    used_titles = {p.paper_title for p in db.query(UsedPaper.paper_title).all()}
+    papers = [p for p in raw_papers if p['title'] not in used_titles][:3]
+    
+    if not papers:
+        logger.warning("No new papers found after filtering used ones.")
+        raise HTTPException(status_code=404, detail="No new papers found.")
+        
     news = fetch_recent_business_news(max_results=3, hours=24, rss_url=config.rss_url)
     
     report_text = gemini_client.generate_insight_report(papers=papers, news=news)
@@ -117,6 +125,8 @@ def run_insight_generation_task(db: Session):
         markdown_content_detailed=detailed
     )
     db.add(db_report)
+    for p in papers:
+        db.add(UsedPaper(paper_title=p['title']))
     db.commit()
     db.refresh(db_report)
     
