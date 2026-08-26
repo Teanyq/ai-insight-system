@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Insight Generator</title>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8253410496421670"
+        crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 </head>
+
 <body>
     <div class="background-glow"></div>
     <div class="container">
@@ -19,7 +23,7 @@
 
         <main>
             <div id="errorBox" class="error-box hidden"></div>
-            
+
             <section class="insights-section">
                 <div class="section-header">
                     <h2>Latest Reports</h2>
@@ -32,7 +36,7 @@
         </main>
     </div>
 
-    
+
     <!-- Modal for viewing full report -->
     <div id="reportModal" class="modal hidden">
         <div class="modal-content glass-panel" style="max-width: 900px; width: 95%;">
@@ -46,18 +50,21 @@
             <div id="modalBodyDetails" class="markdown-body tab-content hidden"></div>
 
             <!-- Google AdSense Placeholder -->
-            <div class="ad-placeholder" style="margin-top: 30px; padding: 20px; text-align: center; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px dashed rgba(255, 255, 255, 0.2);">
+            <div class="ad-placeholder"
+                style="margin-top: 30px; padding: 20px; text-align: center; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px dashed rgba(255, 255, 255, 0.2);">
                 <p style="color: #94a3b8; font-size: 0.95rem; font-weight: bold; margin-bottom: 5px;">Sponsored</p>
                 <!-- Replace the code below with your actual Google AdSense script and <ins> tag -->
-                <div style="width: 100%; height: 90px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b;">
+                <div
+                    style="width: 100%; height: 90px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b;">
                     Google AdSense Banner
                 </div>
             </div>
         </div>
     </div>
-    
+
     </div>
 
     <script src="public.js"></script>
 </body>
+
 </html>
