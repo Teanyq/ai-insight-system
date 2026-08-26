@@ -9,6 +9,7 @@
         const modalTitle = document.getElementById('modalTitle');
         const modalBody = document.getElementById('modalBody');
         const closeBtn = document.querySelector('.close-btn');
+        let currentReportId = null;
 
         mermaid.initialize({ startOnLoad: false, theme: 'default' });
         fetchReports();
@@ -149,10 +150,40 @@
             });
         }
 
+        const deleteReportBtn = document.getElementById('deleteReportBtn');
+        if (deleteReportBtn) {
+            deleteReportBtn.addEventListener('click', async () => {
+                if (!currentReportId) return;
+                
+                if (!confirm('このレポートを削除しますか？\\n(管理者のログインが必要です)')) return;
+                
+                try {
+                    const res = await fetch(\`/api/v1/insights/\${currentReportId}\`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (res.status === 401) {
+                        alert('管理者のログインが必要です。管理画面（/docs または /api/v1/settings 等）でBasic認証を行ってから再度お試しください。');
+                        return;
+                    }
+                    
+                    if (!res.ok) throw new Error('Delete failed: ' + res.status);
+                    
+                    alert('削除しました。');
+                    modal.classList.add('hidden');
+                    fetchReports(); // reload
+                } catch (err) {
+                    console.error(err);
+                    alert('削除に失敗しました: ' + err.message);
+                }
+            });
+        }
+
         function openReport(report) {
             const modalTitle = document.getElementById('modalTitle');
             const modal = document.getElementById('reportModal');
             
+            currentReportId = report.id;
             modalTitle.textContent = report.title;
             
             // Render Markdown
