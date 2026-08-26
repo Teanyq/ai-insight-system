@@ -92,7 +92,7 @@ import os
 def run_insight_generation_task(db: Session):
     config = get_or_create_config(db)
     
-    raw_papers = fetch_latest_ai_papers(max_results=15, search_query=config.arxiv_query)
+    raw_papers = fetch_latest_ai_papers(max_results=100, search_query=config.arxiv_query)
     used_titles = {p.paper_title for p in db.query(UsedPaper.paper_title).all()}
     papers = [p for p in raw_papers if p['title'] not in used_titles][:3]
     
@@ -115,8 +115,9 @@ def run_insight_generation_task(db: Session):
     
     title = "AI Business Insights"
     for line in overview.split('\n'):
-        if line.startswith('# '):
-            title = line.replace('# ', '').strip()
+        line_stripped = line.strip()
+        if line_stripped.startswith('# ') or line_stripped.startswith('## '):
+            title = line_stripped.replace('# ', '').replace('## ', '').replace('**', '').strip()
             break
             
     db_report = InsightReport(
