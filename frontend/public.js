@@ -54,7 +54,7 @@
                     <h3>運営者情報</h3>
                     <p>AI Insight Engineは、最新のAI論文とビジネスニュースを掛け合わせてインサイトを自動生成するプロジェクトです。</p>
                     <p>お問い合わせやフィードバックは、以下のX（Twitter）アカウント（またはDM）までお気軽にどうぞ。</p>
-                    <p><a href="https://twitter.com/" target="_blank" style="color: #3b82f6; font-weight: bold;">X (Twitter) で問い合わせる</a></p>
+                    <p><a href="https://x.com/AIInsightBridge" target="_blank" style="color: #3b82f6; font-weight: bold;">@AIInsightBridge (X) に問い合わせる</a></p>
                 `;
                 infoModal.classList.remove('hidden');
             });
