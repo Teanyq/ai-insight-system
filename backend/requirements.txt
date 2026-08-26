@@ -8,3 +8,4 @@ pydantic
 tweepy
 
 sqlalchemy
+psycopg2-binary
