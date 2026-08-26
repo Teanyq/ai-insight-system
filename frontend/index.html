@@ -43,8 +43,11 @@
     <!-- Modal for viewing full report -->
     <div id="reportModal" class="modal hidden">
         <div class="modal-content glass-panel" style="max-width: 900px; width: 95%;">
-            <span class="close-btn">&times;</span>
-            <h2 id="modalTitle">Report</h2>
+            <div class="modal-header-actions" style="position: absolute; top: 1.5rem; right: 1.5rem; display: flex; gap: 15px; align-items: center;">
+                <button id="deleteReportBtn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.5)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">🗑️ 削除</button>
+                <span class="close-btn" style="position: static;">&times;</span>
+            </div>
+            <h2 id="modalTitle" style="padding-right: 120px;">Report</h2>
             <div class="tabs">
                 <button class="tab-btn active" id="tabOverview">💡 Overview</button>
                 <button class="tab-btn" id="tabDetails">📄 Details</button>
