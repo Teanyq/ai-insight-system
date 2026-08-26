@@ -197,3 +197,12 @@ async def run_daily_job(token: str, db: Session = Depends(get_db)):
 def get_insights(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     reports = db.query(InsightReport).order_by(InsightReport.created_at.desc()).offset(skip).limit(limit).all()
     return reports
+
+@router.delete("/insights/{report_id}")
+def delete_insight(report_id: int, db: Session = Depends(get_db), username: str = Depends(verify_admin)):
+    report = db.query(InsightReport).filter(InsightReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    db.delete(report)
+    db.commit()
+    return {"status": "success", "message": f"Report {report_id} deleted."}
