@@ -155,10 +155,10 @@
             deleteReportBtn.addEventListener('click', async () => {
                 if (!currentReportId) return;
                 
-                if (!confirm('このレポートを削除しますか？\\n(管理者のログインが必要です)')) return;
+                if (!confirm('このレポートを削除しますか？\n(管理者のログインが必要です)')) return;
                 
                 try {
-                    const res = await fetch(\`/api/v1/insights/\${currentReportId}\`, {
+                    const res = await fetch(`/api/v1/insights/${currentReportId}`, {
                         method: 'DELETE'
                     });
                     
