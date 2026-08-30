@@ -402,9 +402,18 @@ header p {
     font-size: 1.2em;
 }
 
+.markdown-body ul ul li::before {
+    content: "◦";
+    color: #00f2fe;
+    font-size: 1.1em;
+}
+
 .markdown-body strong {
-    color: #f8fafc;
-    font-weight: 600;
+    color: #00f2fe;
+    font-weight: 700;
+    background: rgba(0, 242, 254, 0.1);
+    padding: 0 4px;
+    border-radius: 4px;
 }
 
 .markdown-body table {
@@ -473,11 +482,12 @@ header p {
 
 /* Mermaid Diagram Design Fix */
 .mermaid {
-    background-color: #f8fafc;
-    border-radius: 8px;
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     padding: 1.5rem;
     margin: 1.5rem 0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: none;
     text-align: center;
     overflow-x: auto;
 }
