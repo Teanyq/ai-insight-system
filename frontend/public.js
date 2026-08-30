@@ -11,7 +11,7 @@
         const closeBtn = document.querySelector('.close-btn');
         let currentReportId = null;
 
-        mermaid.initialize({ startOnLoad: false, theme: 'default' });
+        mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: { background: 'transparent' } });
         fetchReports();
         
         if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
