@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import logging
 from typing import List, Dict
 from backend.core.config import settings
@@ -17,22 +18,16 @@ class GeminiClient:
 
         if not api_key or api_key == "your_gemini_api_key_here":
             logger.warning("GEMINI_API_KEY is not set.")
+            self.client = None
         else:
-            genai.configure(api_key=api_key)
+            self.client = genai.Client(api_key=api_key)
             self.is_configured = True
 
         self.model_name = 'gemini-3.5-flash'
-        try:
-            self.model = genai.GenerativeModel(
-                model_name=self.model_name,
-                system_instruction="You are a charismatic, extremely easy-to-understand tech influencer who breaks down complex AI research for college students and young professionals. Your tone is energetic, accessible, and completely free of academic jargon."
-            )
-        except Exception as e:
-            logger.error(f"Gemini init error: {e}")
-            self.model = None
+        self.sys_inst = "You are a charismatic, extremely easy-to-understand tech influencer who breaks down complex AI research for college students and young professionals. Your tone is energetic, accessible, and completely free of academic jargon."
 
     def generate_insight_report(self, papers: List[Dict[str, str]], news: List[Dict[str, str]]) -> str:
-        if not self.is_configured or not self.model:
+        if not self.is_configured or not self.client:
             return "Error: Gemini API is not configured."
         if not papers:
             return "Error: No papers available to focus on."
@@ -114,7 +109,13 @@ Rules for the tweet:
 
         logger.info("Calling Gemini API with youth-targeted prompt...")
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.sys_inst,
+                )
+            )
             logger.info("Gemini API call success")
             return response.text
         except Exception as e:
@@ -122,7 +123,7 @@ Rules for the tweet:
             return f"Report generation error: {e}"
 
     def fix_report_title(self, content: str) -> str:
-        if not self.is_configured or not self.model:
+        if not self.is_configured or not self.client:
             return "AI Business Insights"
         prompt = (
             "Extract a catchy, clickbait-style but accurate title from the following Markdown report. "
@@ -130,7 +131,10 @@ Rules for the tweet:
             f"REPORT:\n{content}"
         )
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             title = response.text.strip().replace('#', '').replace('**', '').strip()
             return title if title else "AI Business Insights"
         except Exception as e:
